@@ -361,7 +361,7 @@ app.post("/location", async (req, res) => {
 
         const { latitude, longitude } = req.body;
 
-        // Validation
+        // 🔹 Validation
         if (
             typeof latitude !== "number" ||
             typeof longitude !== "number"
@@ -372,22 +372,107 @@ app.post("/location", async (req, res) => {
             });
         }
 
-        const location = new LocationTrack({
-            latitude,
-            longitude,
-          
-        });
+        // 🔹 Update single document
+        const location = await LocationTrack.findOneAndUpdate(
 
-        await location.save();
+            {}, // empty filter = first document
 
-        return res.status(201).json({
+            {
+                latitude,
+                longitude,
+                timestamp: Date.now()
+            },
+
+            {
+                new: true,
+                upsert: true
+            }
+        );
+
+        return res.status(200).json({
             success: true,
-            message: "Location saved"
+            message: "Location updated",
+            data: location
         });
 
     } catch (error) {
 
         console.error("❌ Location API Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+
+// ======================================================
+// 🔥 GET RIDE LOGS
+// ======================================================
+
+app.get("/ride/logs", async (req, res) => {
+
+    try {
+
+        const { date } = req.query;
+
+        let filter = {};
+
+        // 🔹 Filter by date
+        if (date) {
+
+            const start = new Date(date);
+            start.setHours(0, 0, 0, 0);
+
+            const end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+
+            filter = {
+                createdAt: {
+                    $gte: start,
+                    $lte: end
+                }
+            };
+        }
+
+        const logs = await RideLog.find(filter)
+            .sort({ updatedAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            data: logs
+        });
+
+    } catch (error) {
+
+        console.error("❌ Get Ride Logs Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// ======================================================
+// 🔥 GET LOCATIONS
+// ======================================================
+
+app.get("/location", async (req, res) => {
+
+    try {
+
+        const location = await LocationTrack.findOne();
+
+        return res.status(200).json({
+            success: true,
+            data: location
+        });
+
+    } catch (error) {
+
+        console.error(error);
 
         return res.status(500).json({
             success: false,
