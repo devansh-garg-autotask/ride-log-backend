@@ -216,12 +216,14 @@ const locationTrackSchema = new mongoose.Schema({
 
     latitude: {
         type: Number,
-        required: true
+        required: false,
+        default: null
     },
 
     longitude: {
         type: Number,
-        required: true
+        required: false,
+        default: null
     },
 
     timestamp: {
@@ -254,28 +256,171 @@ function isValidLog(log) {
 // 🔥 Ride Logs API
 // ======================================================
 
+// app.post("/ride/logs", async (req, res) => {
+
+//     try {
+
+//         const { logs } = req.body;
+
+//         if (!Array.isArray(logs)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "logs must be array"
+//             });
+//         }
+
+//         if (logs.length === 0) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Empty logs array"
+//             });
+//         }
+
+//         if (logs.length > 1000) {
+//             return res.status(413).json({
+//                 success: false,
+//                 message: "Too many logs"
+//             });
+//         }
+
+//         const operations = [];
+
+//         for (const log of logs) {
+
+//             if (!isValidLog(log)) continue;
+
+//             const dbLog = {
+//                 app: log.app,
+//                 status: log.status,
+//                 info: log.info,
+//                 key: log.key || null,
+//                 rideAppearTime: log.rideAppearTime || null,
+//                 rideAcceptanceTime: log.rideAcceptanceTime || null
+//             };
+
+//             // 🔹 UPSERT
+//             if (log.key && log.key.trim() !== "") {
+
+//                 operations.push({
+//                     updateOne: {
+//                         filter: { key: log.key },
+//                         update: { $set: dbLog },
+//                         upsert: true
+//                     }
+//                 });
+
+//             }
+
+//             // 🔹 INSERT
+//             else {
+
+//                 operations.push({
+//                     insertOne: {
+//                         document: dbLog
+//                     }
+//                 });
+
+//             }
+//         }
+
+//         if (operations.length === 0) {
+
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "No valid logs"
+//             });
+//         }
+
+//         const result = await RideLog.bulkWrite(
+//             operations,
+//             { ordered: false }
+//         );
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Logs processed",
+//             result
+//         });
+
+//     } catch (error) {
+
+//         console.error("❌ Ride API Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error"
+//         });
+//     }
+// });
+
 app.post("/ride/logs", async (req, res) => {
 
     try {
 
-        const { logs } = req.body;
+        const {
+            logs,
+            latitude,
+            longitude
+        } = req.body;
+
+        // =========================
+        // LOCATION UPDATE
+        // =========================
+
+        const locationUpdateData = {
+
+            timestamp: Date.now()
+
+        };
+
+        // Only overwrite location if valid coords received
+        if (
+            typeof latitude === "number" &&
+            typeof longitude === "number"
+        ) {
+
+            locationUpdateData.latitude = latitude;
+            locationUpdateData.longitude = longitude;
+        }
+
+        await LocationTrack.findOneAndUpdate(
+
+            {},
+
+            locationUpdateData,
+
+            {
+                new: true,
+                upsert: true
+            }
+        );
+
+        // =========================
+        // LOG VALIDATION
+        // =========================
 
         if (!Array.isArray(logs)) {
+
             return res.status(400).json({
+
                 success: false,
                 message: "logs must be array"
             });
         }
 
         if (logs.length === 0) {
+
             return res.status(400).json({
+
                 success: false,
                 message: "Empty logs array"
             });
         }
 
         if (logs.length > 1000) {
+
             return res.status(413).json({
+
                 success: false,
                 message: "Too many logs"
             });
@@ -288,6 +433,7 @@ app.post("/ride/logs", async (req, res) => {
             if (!isValidLog(log)) continue;
 
             const dbLog = {
+
                 app: log.app,
                 status: log.status,
                 info: log.info,
@@ -296,47 +442,57 @@ app.post("/ride/logs", async (req, res) => {
                 rideAcceptanceTime: log.rideAcceptanceTime || null
             };
 
-            // 🔹 UPSERT
+            // UPSERT
             if (log.key && log.key.trim() !== "") {
 
                 operations.push({
+
                     updateOne: {
+
                         filter: { key: log.key },
+
                         update: { $set: dbLog },
+
                         upsert: true
                     }
                 });
 
             }
 
-            // 🔹 INSERT
+            // INSERT
             else {
 
                 operations.push({
+
                     insertOne: {
+
                         document: dbLog
                     }
                 });
-
             }
         }
 
         if (operations.length === 0) {
 
             return res.status(400).json({
+
                 success: false,
                 message: "No valid logs"
             });
         }
 
         const result = await RideLog.bulkWrite(
+
             operations,
+
             { ordered: false }
         );
 
         return res.status(200).json({
+
             success: true,
-            message: "Logs processed",
+            message: "Logs and location processed",
+
             result
         });
 
@@ -345,61 +501,7 @@ app.post("/ride/logs", async (req, res) => {
         console.error("❌ Ride API Error:", error);
 
         return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-});
 
-// ======================================================
-// 🔥 Location Tracking API
-// ======================================================
-
-app.post("/location", async (req, res) => {
-
-    try {
-
-        const { latitude, longitude } = req.body;
-
-        // 🔹 Validation
-        if (
-            typeof latitude !== "number" ||
-            typeof longitude !== "number"
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid coordinates"
-            });
-        }
-
-        // 🔹 Update single document
-        const location = await LocationTrack.findOneAndUpdate(
-
-            {}, // empty filter = first document
-
-            {
-                latitude,
-                longitude,
-                timestamp: Date.now()
-            },
-
-            {
-                new: true,
-                upsert: true
-            }
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Location updated",
-            data: location
-        });
-
-    } catch (error) {
-
-        console.error("❌ Location API Error:", error);
-
-        return res.status(500).json({
             success: false,
             message: "Internal server error"
         });
