@@ -141,102 +141,6 @@ function isValidLog(log) {
 // 🔥 Ride Logs API
 // ======================================================
 
-// app.post("/ride/logs", async (req, res) => {
-
-//     try {
-
-//         const { logs } = req.body;
-
-//         if (!Array.isArray(logs)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "logs must be array"
-//             });
-//         }
-
-//         if (logs.length === 0) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Empty logs array"
-//             });
-//         }
-
-//         if (logs.length > 1000) {
-//             return res.status(413).json({
-//                 success: false,
-//                 message: "Too many logs"
-//             });
-//         }
-
-//         const operations = [];
-
-//         for (const log of logs) {
-
-//             if (!isValidLog(log)) continue;
-
-//             const dbLog = {
-//                 app: log.app,
-//                 status: log.status,
-//                 info: log.info,
-//                 key: log.key || null,
-//                 rideAppearTime: log.rideAppearTime || null,
-//                 rideAcceptanceTime: log.rideAcceptanceTime || null
-//             };
-
-//             // 🔹 UPSERT
-//             if (log.key && log.key.trim() !== "") {
-
-//                 operations.push({
-//                     updateOne: {
-//                         filter: { key: log.key },
-//                         update: { $set: dbLog },
-//                         upsert: true
-//                     }
-//                 });
-
-//             }
-
-//             // 🔹 INSERT
-//             else {
-
-//                 operations.push({
-//                     insertOne: {
-//                         document: dbLog
-//                     }
-//                 });
-
-//             }
-//         }
-
-//         if (operations.length === 0) {
-
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "No valid logs"
-//             });
-//         }
-
-//         const result = await RideLog.bulkWrite(
-//             operations,
-//             { ordered: false }
-//         );
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Logs processed",
-//             result
-//         });
-
-//     } catch (error) {
-
-//         console.error("❌ Ride API Error:", error);
-
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error"
-//         });
-//     }
-// });
 
 app.post("/ride/logs", async (req, res) => {
 
@@ -244,7 +148,7 @@ app.post("/ride/logs", async (req, res) => {
 
         const {
             logs,
-            appStatuslogs,
+            appStatusLogs,
             latitude,
             longitude
         } = req.body;
@@ -253,9 +157,9 @@ app.post("/ride/logs", async (req, res) => {
         // APP STATUS UPDATE
         // =========================
 
-        if (Array.isArray(appStatuslogs)) {
+        if (Array.isArray(appStatusLogs)) {
 
-            for (const statusLog of appStatuslogs) {
+            for (const statusLog of appStatusLogs) {
 
                 const appStatusUpdateData = {
 
