@@ -303,14 +303,14 @@ app.post("/ride/logs", async (req, res) => {
             }
         }
 
-        if (operations.length === 0) {
+        // if (operations.length === 0) {
 
-            return res.status(400).json({
+        //     return res.status(400).json({
 
-                success: false,
-                message: "No valid logs"
-            });
-        }
+        //         success: false,
+        //         message: "No valid logs"
+        //     });
+        // }
 
         const result = await RideLog.bulkWrite(
 
@@ -322,7 +322,7 @@ app.post("/ride/logs", async (req, res) => {
         return res.status(200).json({
 
             success: true,
-            message: "Logs and location processed",
+            message: "Status, Logs and location processed",
 
             result
         });
