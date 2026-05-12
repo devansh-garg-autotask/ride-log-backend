@@ -150,7 +150,7 @@ app.post("/ride/logs", async (req, res) => {
 
         const {
             logs,
-            appStatusLogs,
+            appStatus,
             latitude,
             longitude
         } = req.body;
@@ -159,9 +159,9 @@ app.post("/ride/logs", async (req, res) => {
         // APP STATUS UPDATE
         // =========================
 
-        if (Array.isArray(appStatusLogs)) {
+        if (Array.isArray(appStatus)) {
 
-            for (const statusLog of appStatusLogs) {
+            for (const statusLog of appStatus) {
 
                 const appStatusUpdateData = {
 
@@ -239,14 +239,14 @@ app.post("/ride/logs", async (req, res) => {
             });
         }
 
-        if (logs.length === 0) {
+        // if (logs.length === 0) {
 
-            return res.status(400).json({
+        //     return res.status(400).json({
 
-                success: false,
-                message: "Empty logs array"
-            });
-        }
+        //         success: false,
+        //         message: "Empty logs array"
+        //     });
+        // }
 
         if (logs.length > 1000) {
 
