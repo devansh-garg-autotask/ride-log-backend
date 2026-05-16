@@ -61,6 +61,12 @@ const rideLogSchema = new mongoose.Schema({
     rideAcceptanceTime: {
         type: Number,
         default: null
+    },
+
+    finalFare: {
+        type: String,
+        default: null,
+        trim: true
     }
 
 }, { timestamps: true });
@@ -123,6 +129,26 @@ const AppStatus = mongoose.model(
     appStatusSchema
 );
 
+//break log schema
+const breakLogSchema = new mongoose.Schema({
+
+    isBreak: {
+        type: Boolean,
+        required: true
+    },
+
+    timestamp: {
+        type: Number,
+        required: true
+    }
+
+}, { timestamps: true });
+
+const BreakLog = mongoose.model(
+    "BreakLog",
+    breakLogSchema
+);
+
 // ======================================================
 // 🔹 Validation
 // ======================================================
@@ -151,6 +177,7 @@ app.post("/ride/logs", async (req, res) => {
         const {
             logs,
             appStatus,
+            breakLogs,
             latitude,
             longitude
         } = req.body;
@@ -191,6 +218,47 @@ app.post("/ride/logs", async (req, res) => {
                         }
                     );
                 }
+            }
+        }
+
+        // =========================
+        // BREAK LOGS
+        // =========================
+
+        if (Array.isArray(breakLogs)) {
+
+            const breakOperations = [];
+
+            for (const breakLog of breakLogs) {
+
+                if (
+                    typeof breakLog.isBreak !== "boolean" ||
+                    typeof breakLog.timestamp !== "number"
+                ) {
+                    continue;
+                }
+
+                breakOperations.push({
+
+                    insertOne: {
+
+                        document: {
+
+                            isBreak: breakLog.isBreak,
+                            timestamp: breakLog.timestamp
+                        }
+                    }
+                });
+            }
+
+            if (breakOperations.length > 0) {
+
+                await BreakLog.bulkWrite(
+
+                    breakOperations,
+
+                    { ordered: false }
+                );
             }
         }
 
@@ -270,7 +338,8 @@ app.post("/ride/logs", async (req, res) => {
                 info: log.info,
                 key: log.key || null,
                 rideAppearTime: log.rideAppearTime || null,
-                rideAcceptanceTime: log.rideAcceptanceTime || null
+                rideAcceptanceTime: log.rideAcceptanceTime || null,
+                finalFare: log.finalFare || null
             };
 
             // UPSERT
@@ -382,6 +451,59 @@ app.get("/ride/logs", async (req, res) => {
         console.error("❌ Get Ride Logs Error:", error);
 
         return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
+
+// ======================================================
+// 🔥 GET BREAK LOGS
+// ======================================================
+
+app.get("/break/logs", async (req, res) => {
+
+    try {
+
+        const { date } = req.query;
+
+        let filter = {};
+
+        // 🔹 Filter by date
+        if (date) {
+
+            const start = new Date(date);
+            start.setHours(0, 0, 0, 0);
+
+            const end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+
+            filter = {
+                createdAt: {
+                    $gte: start,
+                    $lte: end
+                }
+            };
+        }
+
+        const logs = await BreakLog.find(filter)
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+
+            success: true,
+            data: logs
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Get Break Logs Error:",
+            error
+        );
+
+        return res.status(500).json({
+
             success: false,
             message: "Internal server error"
         });
