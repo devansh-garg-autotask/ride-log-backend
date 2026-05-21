@@ -62,7 +62,14 @@ const rideLogSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
-
+    rideStartedTime: {
+        type: Number,
+        default: null
+    },
+    rideCompletionTime: {
+        type: Number,
+        default: null
+    },
     finalFare: {
         type: String,
         default: null,
@@ -339,6 +346,8 @@ app.post("/ride/logs", async (req, res) => {
                 key: log.key || null,
                 rideAppearTime: log.rideAppearTime || null,
                 rideAcceptanceTime: log.rideAcceptanceTime || null,
+                rideStartedTime: log.rideStartedTime || null,
+                rideCompletionTime: log.rideCompletionTime || null,
                 finalFare: log.finalFare || null
             };
 
